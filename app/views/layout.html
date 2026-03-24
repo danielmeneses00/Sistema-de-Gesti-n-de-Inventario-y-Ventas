@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}StockApp{% endblock %} — Sistema de Inventario</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🏪</div>
+    <div>
+      <div class="logo-name">StockApp</div>
+      <div class="logo-sub">INVENTARIO v1.0</div>
+    </div>
+  </div>
+
+  <div class="nav-section">Principal</div>
+  <a href="{{ url_for('dashboard.index') }}"
+     class="nav-item {% if active == 'dashboard' %}active{% endif %}">
+    <span class="nav-icon">📊</span> Dashboard
+  </a>
+
+  <div class="nav-section">Gestión</div>
+  <a href="{{ url_for('productos.index') }}"
+     class="nav-item {% if active == 'productos' %}active{% endif %}">
+    <span class="nav-icon">📦</span> Productos
+  </a>
+  <a href="{{ url_for('categorias.index') }}"
+     class="nav-item {% if active == 'categorias' %}active{% endif %}">
+    <span class="nav-icon">🏷️</span> Categorías
+  </a>
+  <a href="{{ url_for('clientes.index') }}"
+     class="nav-item {% if active == 'clientes' %}active{% endif %}">
+    <span class="nav-icon">👤</span> Clientes
+  </a>
+
+  <div class="nav-section">Operaciones</div>
+  <a href="{{ url_for('ventas.nueva') }}"
+     class="nav-item {% if active == 'pos' %}active{% endif %}">
+    <span class="nav-icon">🛒</span> Punto de Venta
+  </a>
+  <a href="{{ url_for('ventas.index') }}"
+     class="nav-item {% if active == 'ventas' %}active{% endif %}">
+    <span class="nav-icon">🧾</span> Ventas
+  </a>
+  <a href="{{ url_for('inventario.index') }}"
+     class="nav-item {% if active == 'inventario' %}active{% endif %}">
+    <span class="nav-icon">🔄</span> Inventario
+  </a>
+</aside>
+
+<!-- ── MAIN WRAPPER ── -->
+<div class="main-wrapper">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+    <div class="topbar-right">
+      {% block topbar_actions %}{% endblock %}
+    </div>
+  </header>
+
+  <!-- FLASH MESSAGES -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div style="padding: 12px 24px 0">
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ 'success' if cat == 'success' else 'error' if cat == 'error' else 'warning' }}">
+            {{ '✅' if cat == 'success' else '❌' if cat == 'error' else '⚠️' }}
+            {{ msg }}
+            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- PAGE CONTENT -->
+  <main class="{% block main_class %}page-content{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

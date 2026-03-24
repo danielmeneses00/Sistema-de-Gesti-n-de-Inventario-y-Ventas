@@ -1,0 +1,164 @@
+{% extends 'layout.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('ventas.nueva') }}" class="btn btn-primary btn-sm">🛒 Nueva Venta</a>
+{% endblock %}
+
+{% block content %}
+
+{# ── Alerta bajo stock ── #}
+{% if bajo_stock %}
+<div class="alert alert-warning">
+  ⚠️ <strong>{{ bajo_stock|length }} producto(s) con stock bajo:</strong>
+  {% for p in bajo_stock %}<em>{{ p.nombre }}</em> ({{ p.stock }} uds.){% if not loop.last %}, {% endif %}{% endfor %}
+  <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+</div>
+{% endif %}
+
+{# ── STATS ── #}
+<div class="stats-row">
+  <div class="stat-card sc-green">
+    <div class="stat-label">Ventas del Mes</div>
+    <div class="stat-value mono">${{ "%.0f"|format(stats.ingresos or 0) }}</div>
+    <div class="stat-sub">{{ stats.total_ventas }} transacciones</div>
+    <div class="stat-icon si-green">💰</div>
+  </div>
+  <div class="stat-card sc-blue">
+    <div class="stat-label">Clientes Registrados</div>
+    <div class="stat-value">{{ total_clientes }}</div>
+    <div class="stat-sub">Total acumulado</div>
+    <div class="stat-icon si-blue">👤</div>
+  </div>
+  <div class="stat-card sc-red">
+    <div class="stat-label">Stock Bajo</div>
+    <div class="stat-value" style="color:var(--red)">{{ bajo_stock|length }}</div>
+    <div class="stat-sub">Requieren reposición</div>
+    <div class="stat-icon si-red">⚠️</div>
+  </div>
+  <div class="stat-card sc-yellow">
+    <div class="stat-label">Ticket Promedio</div>
+    <div class="stat-value mono">${{ "%.0f"|format(stats.ticket_promedio or 0) }}</div>
+    <div class="stat-sub">{{ stats.pendientes }} pendientes</div>
+    <div class="stat-icon si-yellow">📊</div>
+  </div>
+</div>
+
+{# ── Gráfico + Actividad ── #}
+<div class="grid-7-5" style="margin-bottom:20px">
+
+  {# Gráfico ventas 7 días #}
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <span class="card-title">📈 Ventas — últimos 7 días</span>
+    </div>
+    <div class="card-body">
+      {% set max_val = namespace(v=1) %}
+      {% for row in ventas_7 %}{% if row.total > max_val.v %}{% set max_val.v = row.total %}{% endif %}{% endfor %}
+      <div class="bar-chart" style="height:120px;margin-bottom:8px">
+        {% set dias = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'] %}
+        {% for row in ventas_7 %}
+        <div class="bc-wrap">
+          <div class="bc-bar {% if loop.last %}current{% endif %}"
+               style="height:{{ ((row.total / max_val.v) * 100)|int }}%;min-height:6px"
+               title="${{ "%.0f"|format(row.total) }}"></div>
+          <div class="bc-label">{{ row.dia[-5:] }}</div>
+        </div>
+        {% else %}
+        <div style="margin:auto;color:var(--muted2);font-size:13px">Sin ventas registradas aún</div>
+        {% endfor %}
+      </div>
+      <div style="display:flex;gap:20px;font-size:12px;color:var(--muted)">
+        <span>Total: <strong style="color:var(--text)" class="mono">${{ "%.0f"|format(ventas_7|sum(attribute='total')) }}</strong></span>
+      </div>
+    </div>
+  </div>
+
+  {# Actividad reciente #}
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header"><span class="card-title">🕒 Actividad Reciente</span></div>
+    <div class="card-body" style="padding:8px 16px">
+      {% for m in actividad %}
+      <div class="activity-item">
+        <div class="act-icon {% if m.tipo_movimiento == 'Entrada' %}si-green{% elif m.tipo_movimiento == 'Salida' %}si-red{% else %}si-yellow{% endif %}">
+          {{ '📥' if m.tipo_movimiento == 'Entrada' else '📤' if m.tipo_movimiento == 'Salida' else '🔧' }}
+        </div>
+        <div>
+          <div class="act-text">
+            <strong>{{ m.tipo_movimiento }}</strong> — {{ m.nombre_producto }}
+            ({{ '+' if m.tipo_movimiento == 'Entrada' else '-' }}{{ m.cantidad_producto }} uds.)
+          </div>
+          <div class="act-time">{{ m.info_movimiento }} · {{ m.fecha_movimiento[:16] }}</div>
+        </div>
+      </div>
+      {% else %}
+      <p style="color:var(--muted2);font-size:13px;padding:8px 0">Sin actividad reciente.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{# ── Últimas ventas + stock bajo ── #}
+<div class="grid-2">
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <span class="card-title">🧾 Últimas Ventas</span>
+      <a href="{{ url_for('ventas.index') }}" class="btn btn-outline btn-xs">Ver todas →</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Factura</th><th>Cliente</th><th>Total</th><th>Estado</th></tr></thead>
+        <tbody>
+          {% for v in ultimas_ventas %}
+          <tr>
+            <td><a href="{{ url_for('ventas.detalle', id=v.id_venta) }}" style="color:var(--blue);font-weight:700" class="mono">#{{ v.numero_factura }}</a></td>
+            <td>{{ v.nombre_cliente or 'Cliente general' }}</td>
+            <td class="mono" style="font-weight:700">${{ "%.0f"|format(v.precio_total) }}</td>
+            <td>
+              <span class="badge {% if v.estado_venta == 'Pagada' %}badge-green{% else %}badge-yellow{% endif %}">
+                {{ v.estado_venta }}
+              </span>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="color:var(--muted2);text-align:center;padding:20px">Sin ventas registradas</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <span class="card-title">⚠️ Productos con Stock Bajo</span>
+      <a href="{{ url_for('productos.index') }}" class="btn btn-outline btn-xs">Ver productos →</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Producto</th><th>Stock</th><th>Mínimo</th></tr></thead>
+        <tbody>
+          {% for p in bajo_stock %}
+          <tr>
+            <td><strong>{{ p.nombre }}</strong></td>
+            <td>
+              <div class="stock-wrap">
+                <span class="mono badge {% if p.stock == 0 %}badge-red{% elif p.stock <= p.stock_min %}badge-yellow{% else %}badge-green{% endif %}">{{ p.stock }}</span>
+                <div class="stock-bg">
+                  <div class="stock-fill" style="width:{{ [((p.stock / (p.stock_min or 1)) * 100)|int, 100]|min }}%;background:{% if p.stock == 0 %}var(--red){% else %}var(--yellow){% endif %}"></div>
+                </div>
+              </div>
+            </td>
+            <td class="mono" style="color:var(--muted)">{{ p.stock_min }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="color:var(--muted2);text-align:center;padding:20px">✅ Todo el stock está bien</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
