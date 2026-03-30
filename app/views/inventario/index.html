@@ -1,0 +1,114 @@
+{% extends 'layout.html' %}
+{% block title %}Inventario{% endblock %}
+{% block page_title %}Movimientos de Inventario{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-outline btn-sm" onclick="document.getElementById('modal-mov').style.display='flex'">
+    + Registrar Movimiento
+  </button>
+{% endblock %}
+
+{% block content %}
+
+<!-- FILTROS -->
+<div style="display:flex;gap:8px;margin-bottom:16px">
+  <a href="{{ url_for('inventario.index') }}"
+     class="btn btn-sm {% if not tipo_filtro %}btn-primary{% else %}btn-outline{% endif %}">Todos</a>
+  <a href="{{ url_for('inventario.index', tipo='Entrada') }}"
+     class="btn btn-sm {% if tipo_filtro == 'Entrada' %}btn-success{% else %}btn-outline{% endif %}"
+     style="{% if tipo_filtro == 'Entrada' %}color:var(--green);border-color:#86efac;background:var(--green-bg){% endif %}">
+    📥 Entradas
+  </a>
+  <a href="{{ url_for('inventario.index', tipo='Salida') }}"
+     class="btn btn-sm {% if tipo_filtro == 'Salida' %}btn-danger{% else %}btn-outline{% endif %}">
+    📤 Salidas
+  </a>
+  <a href="{{ url_for('inventario.index', tipo='Ajuste') }}"
+     class="btn btn-sm btn-outline"
+     style="{% if tipo_filtro == 'Ajuste' %}color:var(--yellow);border-color:#fcd34d;background:var(--yellow-bg){% endif %}">
+    🔧 Ajustes
+  </a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Tipo</th><th>Producto</th><th>Cantidad</th><th>Valor</th><th>Info</th><th>Fecha</th></tr>
+      </thead>
+      <tbody>
+        {% for m in movimientos %}
+        <tr>
+          <td class="mono" style="color:var(--muted)">{{ m.id_movimiento }}</td>
+          <td>
+            {% if m.tipo_movimiento == 'Entrada' %}
+              <span class="badge badge-green">📥 Entrada</span>
+            {% elif m.tipo_movimiento == 'Salida' %}
+              <span class="badge badge-red">📤 Salida</span>
+            {% else %}
+              <span class="badge badge-yellow">🔧 Ajuste</span>
+            {% endif %}
+          </td>
+          <td><strong>{{ m.nombre_producto }}</strong></td>
+          <td class="mono" style="font-weight:700;color:{% if m.tipo_movimiento == 'Entrada' %}var(--green){% elif m.tipo_movimiento == 'Salida' %}var(--red){% else %}var(--yellow){% endif %}">
+            {{ '+' if m.tipo_movimiento == 'Entrada' else '-' }}{{ m.cantidad_producto }}
+          </td>
+          <td class="mono">${{ "%.0f"|format(m.valor_movimiento or 0) }}</td>
+          <td style="font-size:12px;color:var(--muted)">{{ m.info_movimiento or '—' }}</td>
+          <td style="font-size:12px;color:var(--muted)">{{ m.fecha_movimiento[:16] }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted2)">Sin movimientos registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer"><span>{{ movimientos|length }} movimiento(s)</span></div>
+</div>
+
+<!-- MODAL REGISTRO -->
+<div id="modal-mov" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:14px;padding:24px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:16px;font-weight:700">🔄 Registrar Movimiento</div>
+      <button onclick="document.getElementById('modal-mov').style.display='none'"
+              style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">×</button>
+    </div>
+    <form method="post" action="{{ url_for('inventario.registrar') }}">
+      <div class="form-group">
+        <label class="form-label">Producto *</label>
+        <select class="form-control" name="id_producto" required>
+          <option value="">Seleccionar producto...</option>
+          {% for p in productos if p.producto_activo %}
+          <option value="{{ p.id_producto }}">{{ p.nombre }} (Stock: {{ p.stock }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">Tipo *</label>
+          <select class="form-control" name="tipo_movimiento" required>
+            <option value="Entrada">📥 Entrada</option>
+            <option value="Salida">📤 Salida</option>
+            <option value="Ajuste">🔧 Ajuste</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cantidad *</label>
+          <input class="form-control mono" name="cantidad" type="number" min="1" required placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción / Motivo</label>
+        <input class="form-control" name="info_movimiento" placeholder="Ej: Compra proveedor, Devolución...">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button type="button" onclick="document.getElementById('modal-mov').style.display='none'"
+                class="btn btn-outline" style="flex:1;justify-content:center">Cancelar</button>
+        <button type="submit" class="btn btn-primary" style="flex:2;justify-content:center">💾 Registrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
