@@ -76,3 +76,4 @@ def eliminar(id):
     Producto.delete(id)
     flash('Producto desactivado.', 'success')
     return redirect(url_for('productos.index'))
+# entrega juan david

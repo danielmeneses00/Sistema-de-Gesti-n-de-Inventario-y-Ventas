@@ -46,3 +46,4 @@ def detalle(id):
         return redirect(url_for('ventas.index'))
     return render_template('ventas/detalle.html', venta=venta,
                            detalles=detalles, active='ventas')
+#entrega juan david
