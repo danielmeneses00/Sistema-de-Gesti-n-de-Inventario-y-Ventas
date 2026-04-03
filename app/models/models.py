@@ -1,7 +1,31 @@
 from .database import get_connection
+"""
+Módulo de modelos del sistema de inventario.
 
-# ───── CATEGORIA ─────
+Este archivo contiene las clases que representan las entidades principales
+del sistema y sus operaciones CRUD, incluyendo:
+
+- Categoria
+- Cliente
+- Venta
+- Movimiento
+
+Cada clase interactúa directamente con la base de datos SQLite a través de
+consultas SQL parametrizadas, siguiendo el patrón MVC.
+
+Características:
+- Uso de consultas seguras (prevención de SQL Injection)
+- Manejo de relaciones entre tablas (JOIN)
+- Aplicación de lógica de negocio (ventas, inventario, historial)
+"""
+
+
 class Categoria:
+    """
+    Modelo que representa la entidad Categoria.
+
+    Permite realizar operaciones CRUD y consultas relacionadas con productos asociados.
+    """
     @staticmethod
     def get_all():
         conn = get_connection()
@@ -45,8 +69,13 @@ class Categoria:
         conn.close()
 
 
-# ───── CLIENTE ─────
 class Cliente:
+    """
+    Modelo que representa la entidad Cliente.
+
+    Permite gestionar clientes, incluyendo búsqueda, actualización lógica
+    y consulta de historial de compras.
+    """
     @staticmethod
     def get_all(search=''):
         conn = get_connection()
@@ -82,6 +111,14 @@ class Cliente:
 
     @staticmethod
     def delete(id):
+        """
+        Realiza un borrado lógico del cliente (soft delete).
+
+        En lugar de eliminar el registro, se marca como inactivo.
+
+        Args:   
+        id (int): ID del cliente.
+        """
         conn = get_connection()
         conn.execute("UPDATE clientes SET cliente_activo=0 WHERE id_cliente=?", (id,))
         conn.commit()
@@ -89,6 +126,17 @@ class Cliente:
 
     @staticmethod
     def historial(id_cliente):
+        """
+        Obtiene el historial de compras de un cliente.
+
+        Incluye productos asociados a cada venta.
+
+        Args:
+        id_cliente (int): ID del cliente.
+
+        Returns:
+        list[sqlite3.Row]: Lista de ventas con productos concatenados.
+        """
         conn = get_connection()
         rows = conn.execute("""
             SELECT v.*, GROUP_CONCAT(p.nombre, ', ') as productos
@@ -103,8 +151,16 @@ class Cliente:
         return rows
 
 
-# ───── VENTA ─────
 class Venta:
+    """
+    Modelo que gestiona las operaciones relacionadas con ventas.
+
+    Incluye:
+    - Registro de ventas
+    - Detalles de productos vendidos
+    - Actualización de inventario
+    - Estadísticas
+    """
     @staticmethod
     def get_all(search=''):
         conn = get_connection()
@@ -136,6 +192,31 @@ class Venta:
 
     @staticmethod
     def create(id_cliente, items, metodo_pago, estado):
+        """
+        Crea una nueva venta con múltiples productos.
+
+        Procesos realizados:
+        - Calcula subtotal, IVA (19%) y total
+        - Genera número de factura automático
+        - Inserta la venta
+        - Inserta detalles de venta
+        - Actualiza el stock de productos
+        - Registra movimientos de inventario
+
+        Args:
+            id_cliente (int | None): ID del cliente (opcional).
+            items (list): Lista de productos con estructura:
+                {
+                    'id_producto': int,
+                    'cantidad': int,
+                    'precio_unidad': float
+                }
+            metodo_pago (str): Método de pago.
+            estado (str): Estado de la venta.
+
+        Returns:
+            str: Número de factura generado.
+        """
         """items = list of {id_producto, cantidad, precio_unidad}"""
         conn = get_connection()
         subtotal = sum(i['cantidad'] * i['precio_unidad'] for i in items)
@@ -200,8 +281,13 @@ class Venta:
         return rows
 
 
-# ───── MOVIMIENTO ─────
 class Movimiento:
+    """
+    Modelo que representa los movimientos de inventario.
+
+    Permite registrar entradas y salidas de productos,
+    afectando directamente el stock.
+    """
     @staticmethod
     def get_all(tipo=''):
         conn = get_connection()

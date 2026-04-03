@@ -1,15 +1,63 @@
 import sqlite3
 import os
 
+"""
+Módulo de conexión y configuración de la base de datos SQLite.
+
+Este módulo se encarga de:
+- Establecer la conexión a la base de datos
+- Activar restricciones de integridad (foreign keys)
+- Inicializar las tablas del sistema
+- Insertar datos de prueba (seed data)
+
+Base de datos: inventario.db
+Motor: SQLite
+"""
+
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'inventario.db')
+"""
+Ruta absoluta a la base de datos SQLite.
+Se construye dinámicamente para evitar problemas de rutas relativas.
+"""
 
 def get_connection():
+    """
+    Crea y retorna una conexión a la base de datos SQLite.
+
+    Configuraciones aplicadas:
+    - row_factory: permite acceder a los resultados como diccionarios
+    - PRAGMA foreign_keys = ON: habilita las restricciones de claves foráneas
+
+    Returns:
+        sqlite3.Connection: conexión activa a la base de datos
+    """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA foreign_keys = ON") # Activa el soporte de claves foráneas en SQLite (desactivado por defecto)
     return conn
 
 def init_db():
+    """
+    Inicializa la base de datos creando las tablas necesarias
+    si no existen e insertando datos de prueba.
+
+    Tablas creadas:
+    - categoria
+    - productos
+    - clientes
+    - ventas
+    - detalle_venta
+    - movimiento_inventario
+
+    Funcionalidades:
+    - Usa executescript para ejecutar múltiples sentencias SQL
+    - Verifica si existen datos en 'categoria' antes de insertar seed data
+    - Garantiza integridad referencial mediante claves foráneas
+
+    Notas:
+    - Esta función debe ejecutarse una sola vez al iniciar la aplicación
+    - Utiliza transacciones implícitas con commit()
+    """
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -78,7 +126,8 @@ def init_db():
         );
     """)
 
-    # Seed data
+# Inserta datos iniciales solo si la tabla categoria está vacía
+# Esto evita duplicados en múltiples ejecuciones
     cursor.execute("SELECT COUNT(*) FROM categoria")
     if cursor.fetchone()[0] == 0:
         cursor.executescript("""
