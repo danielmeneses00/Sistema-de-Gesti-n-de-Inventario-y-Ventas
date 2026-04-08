@@ -23,6 +23,7 @@ def create_app():
     static_dir = os.path.join(app_dir, 'static')
     
     app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+    app.secret_key = 'f3a9b2c1d4e5f6a7b8c9d0e1f2a3b4c5'
     
     # Inicializar base de datos
     init_db()
